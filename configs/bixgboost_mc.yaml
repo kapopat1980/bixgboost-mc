@@ -1,0 +1,63 @@
+# BiXGBoost-MC hyperparameter configuration
+# Matches Table 2 from the paper exactly
+
+model:
+  name: BiXGBoost-MC
+
+bilstm:
+  hidden_dims: [128, 64]       # H1, H2 — stacked Bi-LSTM layers
+  num_layers: 2
+  dropout: 0.30
+  learning_rate: 0.0008        # 8e-4
+  batch_size: 256
+  lookback_window: 24          # 4-hour lookback at 10-min resolution
+  max_epochs: 200
+  early_stopping_patience: 40
+  lr_reduce_patience: 20
+  lr_reduce_factor: 0.5
+  gradient_clip_max_norm: 1.0
+  optimizer:
+    name: Adam
+    betas: [0.9, 0.999]
+
+xgboost:
+  n_estimators: 800
+  max_depth: 6
+  learning_rate: 0.05
+  subsample: 0.80
+  colsample_bytree: 0.80
+  reg_lambda: 1.0
+  objective: reg:pseudohubererror
+  huber_slope: 1.35            # delta for pseudo-Huber loss
+  early_stopping_rounds: 50
+  cv_folds: 5
+
+bfal:
+  # Bifacial Feature Augmentation Layer parameters
+  tilt_angle_deg: 25.0         # module tilt (site-specific — update for new sites)
+  row_height_m: 1.5            # hub height above ground
+  row_pitch_m: 6.0             # distance between row centres
+  wccf_alpha: 0.012            # empirical constant calibrated on PVDAQ training set
+  t_ref_celsius: 25.0          # standard reference temperature
+
+data:
+  resolution_minutes: 10
+  train_frac: 0.70
+  val_frac: 0.10
+  test_frac: 0.20
+  normalization: minmax        # fit on training set only
+  max_gap_fill_steps: 3        # gaps <= 30 min filled by linear interpolation
+  solar_elevation_threshold_deg: 5.0
+
+forecasting:
+  horizons: [1, 3, 6]          # steps → 10 min, 30 min, 60 min
+
+reproducibility:
+  seeds: [42, 123, 456, 789, 1024]   # five independent runs
+
+evaluation:
+  metrics: [rmse, mae, mape, r2, nrmse]
+  diebold_mariano:
+    loss: squared_error
+    alternative: less           # one-sided: BiXGBoost-MC more accurate
+    harvey_correction: true     # Harvey-Leybourne-Newbold finite-sample correction
